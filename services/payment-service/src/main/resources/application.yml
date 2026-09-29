@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payments}
+    username: ${DB_USER:payments}
+    password: ${DB_PASSWORD:payments}
+    hikari:
+      pool-name: payments-pool
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      # Fail fast on pool exhaustion so it surfaces as errors, not hung requests.
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:3000}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8082}
+  shutdown: graceful
+
+payment:
+  max-amount: ${PAYMENT_MAX_AMOUNT:5000.00}
+  fraud-check-query-delay: ${PAYMENT_FRAUD_CHECK_DELAY:0ms}
+
+app:
+  version: ${APP_VERSION:1.0.0}
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${app.version}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      version: ${app.version}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: api-gateway
+  threads:
+    virtual:
+      enabled: true
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: order-service
+              uri: ${ORDER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/orders/**
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/payments/**
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+app:
+  version: ${APP_VERSION:1.0.0}
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${app.version}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      version: ${app.version}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

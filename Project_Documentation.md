@@ -254,17 +254,17 @@ The system performs the action and verifies recovery.
 ┌─────────────────────────────────────────────────────────────┐
 │                     Kubernetes Cluster                      │
 │                                                             │
-│  ┌────────────┐   ┌──────────────┐   ┌──────────────────┐ │
-│  │ API Gateway│ → │ Order Service│ → │ Payment Service  │ │
-│  └────────────┘   └──────────────┘   └──────────────────┘ │
+│  ┌────────────┐   ┌──────────────┐   ┌──────────────────┐   │
+│  │ API Gateway│ → │ Order Service│ → │ Payment Service  │   │
+│  └────────────┘   └──────────────┘   └──────────────────┘   │
 │                                             │               │
 │                                             ▼               │
-│                                        PostgreSQL            │
+│                                        PostgreSQL           │
 │                                                             │
-│  ┌────────────────┐     ┌──────────────────────────────┐  │
-│  │ OpenTelemetry  │────▶│ Prometheus / Loki / Tempo   │  │
-│  │ Collector      │     │ Grafana                      │  │
-│  └────────────────┘     └──────────────────────────────┘  │
+│  ┌────────────────┐     ┌──────────────────────────────┐    │
+│  │ OpenTelemetry  │───▶ │ Prometheus / Loki / Tempo    │    │
+│  │ Collector      │     │ Grafana                      │    │
+│  └────────────────┘     └──────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
                                     │
                      Alertmanager webhook (signed)
@@ -1498,6 +1498,11 @@ Example:
 ```
 
 This lets you demonstrate the entire platform repeatedly.
+
+> **Implemented (Phase 1):** each service exposes these endpoints itself
+> via the shared `chaos-spring-boot-starter`, so the `service` field is
+> implied by the host you call. `GET /failure` and `DELETE /failure[/{type}]`
+> list and stop failures. See `chaos/README.md` for details.
 
 ------------------------------------------------------------------------
 

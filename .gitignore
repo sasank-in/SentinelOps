@@ -1,0 +1,25 @@
+# Build output
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local secrets
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+.vscode/
