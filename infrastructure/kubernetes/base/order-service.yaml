@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    app.kubernetes.io/name: order-service
+spec:
+  selector:
+    app.kubernetes.io/name: order-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  # Kept so `kubectl rollout undo` (the future rollback_deployment tool) has history.
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: order-service
+        app.kubernetes.io/component: backend
+        # Single source of truth for the release version; exposed to the app below.
+        app.kubernetes.io/version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /actuator/prometheus
+    spec:
+      # App pods never talk to the Kubernetes API.
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: order-service
+          image: sentinelops/order-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: sentinelops-runtime
+          env:
+            # Release-specific settings live in the pod template (not a ConfigMap) so a
+            # Deployment revision captures them and `rollout undo` restores them.
+            - name: APP_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/version']
+            - name: PORT
+              value: "8080"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/orders
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: { name: postgres-credentials, key: ORDERS_DB_USER }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres-credentials, key: ORDERS_DB_PASSWORD }
+            - name: PAYMENT_SERVICE_URL
+              value: http://payment-service:8080
+          # Startup: allow up to 150s for the JVM under a 1-CPU limit.
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          # Liveness excludes the database on purpose: a DB outage must not turn into a
+          # restart storm.
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          lifecycle:
+            # Let endpoints/kube-proxy drop the pod before Spring starts shutting down.
+            preStop:
+              sleep:
+                seconds: 5
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

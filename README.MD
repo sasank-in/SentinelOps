@@ -29,7 +29,21 @@ Failure → Telemetry → Alert → n8n → Incident created → AI investigates
 See [Project_Documentation.md](Project_Documentation.md) for the full design, build order, and definition of done.
 
 - ✅ **Phase 1: base microservices**: API Gateway → Order → Payment → PostgreSQL, failure injection, load generator
-- ⏭️ Phase 2: Kubernetes
+- ✅ **Phase 2: Kubernetes**: Kustomize manifests, probes, resource limits, hardened pods, rollback-ready releases ([infrastructure/kubernetes](infrastructure/kubernetes/README.md))
+- ⏭️ Phase 3: Observability (OpenTelemetry, Prometheus, Grafana, Loki, Tempo)
+
+## Run on Kubernetes
+
+```bash
+docker compose stop            # free memory if the compose stack is running
+scripts/k8s-up.sh              # builds images and deploys to the local cluster
+curl localhost:30080/api/orders?customerId=cust-1
+
+chaos/scenarios/payment-bad-release.sh                          # break it (INC-1042)
+kubectl -n sentinelops rollout undo deployment/payment-service  # fix it
+```
+
+The scripts are bash; on Windows run them from Git Bash.
 
 ## Quick start
 
@@ -68,8 +82,10 @@ services/api-gateway/             Spring Cloud Gateway (WebMVC)
 services/order-service/           orders; calls payment-service with 2s/5s timeouts
 services/payment-service/         idempotent payments; limit-based declines; configurable slow query
 infrastructure/docker/            shared Java Dockerfile, Postgres init
+infrastructure/kubernetes/        Kustomize base + local overlay
+scripts/                          k8s-up.sh / k8s-down.sh
 load-generator/                   stdlib-only Python traffic generator
-chaos/                            failure-injection docs and (later) scripted scenarios
+chaos/                            failure-injection docs, k8s-inject.sh, scripted scenarios
 ```
 
 ## Build and test

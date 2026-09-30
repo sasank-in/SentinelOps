@@ -50,10 +50,32 @@ curl -X POST localhost:8082/failure/database -H 'Content-Type: application/json'
 curl -X DELETE localhost:8082/failure
 ```
 
+## On Kubernetes
+
+The services aren't exposed individually in the cluster; use the helper, which calls
+`/failure` inside every pod of a service:
+
+```bash
+chaos/k8s-inject.sh payment-service latency 180 80
+chaos/k8s-inject.sh payment-service stop
+```
+
+To break a single replica only, `kubectl port-forward pod/<name> 8082:8080` and call it
+directly.
+
 ## The "bad deployment" scenario
 
 The main demo needs a failure that a **rollback** really fixes, so it is caused by
-configuration rather than by `/failure/*`:
+configuration rather than by `/failure/*`.
+
+On Kubernetes (the real demo):
+
+```bash
+chaos/scenarios/payment-bad-release.sh                          # rolls out 1.8.2
+kubectl -n sentinelops rollout undo deployment/payment-service  # remediation
+```
+
+With docker-compose:
 
 ```bash
 # Bad release: tiny pool + slow fraud-check query

@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Local cluster (Docker Desktop Kubernetes, kind, k3d).
+#   kubectl apply -k infrastructure/kubernetes/overlays/local
+
+namespace: sentinelops
+
+# Also applied to the generated Secret/ConfigMap below (base labels don't reach them).
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sentinelops
+    includeSelectors: false
+
+resources:
+  - ../../base
+
+# Images are built locally (scripts/k8s-up.sh) and used without a registry.
+images:
+  - name: sentinelops/api-gateway
+    newTag: "1.0.0"
+  - name: sentinelops/order-service
+    newTag: "1.0.0"
+  - name: sentinelops/payment-service
+    newTag: "1.8.1"
+
+configMapGenerator:
+  - name: sentinelops-runtime
+    literals:
+      # Enables /failure/* endpoints. Remove for a cluster that must not be breakable.
+      - SPRING_PROFILES_ACTIVE=chaos
+
+secretGenerator:
+  # DEMO CREDENTIALS ONLY - never reuse outside a local cluster.
+  - name: postgres-credentials
+    literals:
+      - POSTGRES_PASSWORD=postgres
+      - ORDERS_DB_USER=orders
+      - ORDERS_DB_PASSWORD=orders
+      - PAYMENTS_DB_USER=payments
+      - PAYMENTS_DB_PASSWORD=payments
+
+patches:
+  # Expose the gateway on the node. Docker Desktop forwards NodePorts to localhost,
+  # so the API is at http://localhost:30080 (port 8080 stays free for docker-compose).
+  - target:
+      kind: Service
+      name: api-gateway
+    patch: |-
+      - op: add
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30080

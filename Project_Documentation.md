@@ -1871,7 +1871,7 @@ Build exactly in this order:
         ↓
 3. Docker / docker-compose
         ↓
-4. Kubernetes (kind or k3d locally)
+4. Kubernetes (Docker Desktop, kind or k3d locally)
         ↓
 5. OpenTelemetry
         ↓

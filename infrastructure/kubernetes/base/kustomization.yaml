@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Environment-neutral manifests. Deploy through an overlay (e.g. overlays/local), which
+# supplies the `postgres-credentials` Secret and the `sentinelops-runtime` ConfigMap.
+
+namespace: sentinelops
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sentinelops
+    includeSelectors: false
+    includeTemplates: true
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - payment-service.yaml
+  - order-service.yaml
+  - api-gateway.yaml

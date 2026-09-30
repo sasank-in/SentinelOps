@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/root/.m2 \
  && cp services/${SERVICE}/target/${SERVICE}-*.jar /workspace/app.jar
 
 FROM eclipse-temurin:21-jre
-RUN useradd --system --uid 10001 app
+RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app app
 WORKDIR /app
 COPY --from=build /workspace/app.jar app.jar
 USER app
